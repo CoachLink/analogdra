@@ -1,14 +1,35 @@
 #include <LiquidCrystal.h>
 
-const byte rs = 2, en = 3, d4 = 4, d5 = 5, d6 = 6, d7 = 7; //lcd
-const byte sql = 1;
-const char ctcss[] = "0000";
-const byte cup = 8, cdown = 9, vup = 10, vdown = 11, pttr = 12, squelch = 13; //buttons
-const byte tx = 1, rx = 0; //serial
-const byte pttw = A0, pd = A1, hl = A2; //dra818u
+//lcd pin parameters
+#define rs 2      
+#define en 3        //lcd enable
+#define d4 4
+#define d5 5
+#define d6 6      
+#define d7 7
+
+//input pins
+#define cup 8       //channel up
+#define cdown 9     //channel down
+#define vup 10      //volume up
+#define vdown 11    //volume down
+#define squelch 12  //squelch from the dra818u
+#define tx 1
+#define rx 0        //serial
+
+#define pd 13       //power down
+#define hl A0       //high/low transmit power
+
+//DRA818U Parameters- squelch level, CTCSS, Channel no., and volume
+#define sql 1
+#define ctcss "0000"
+
 byte freq = 0, vol = 6;
-const String freqs[] = {"462.5625", "462.5875", "462.6125", "462.6375", "462.6625", "462.6875", "462.7125", "467.5625", "467.5875", "467.6125", "467.6375", "467.6625", "467.6875", "467.7125", "462.5500", "462.5750", "462.6000", "462.6250", "462.6500", "462.6750", "462.7000", "462.7250"};
-bool transmit = false;
+
+const String freqs[] = {"462.5625", "462.5875", "462.6125", "462.6375", "462.6625", "462.6875", "462.7125", "467.5625", "467.5875",
+                        "467.6125", "467.6375", "467.6625", "467.6875", "467.7125", "462.5500", "462.5750", "462.6000", "462.6250",
+                        "462.6500", "462.6750", "462.7000", "462.7250"};
+                        
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
 //serial parameters
@@ -22,7 +43,6 @@ void setup() {
   for (int i = cup; i <= squelch; i++) {
     pinMode(i, INPUT_PULLUP);
   }
-  pinMode(pttw, OUTPUT);
   pinMode(pd, OUTPUT);
   pinMode(hl, OUTPUT);
 
@@ -30,31 +50,38 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(cdown), chandown, FALLING);
   attachInterrupt(digitalPinToInterrupt(vup), volup, FALLING);
   attachInterrupt(digitalPinToInterrupt(vdown), voldown, FALLING);
-  attachInterrupt(digitalPinToInterrupt(pttr), pttt, FALLING);
-
+  
   Serial.begin(9600);
   while (!Serial) {
     ;
   }
-
 }
 
 void loop() {
   recvDra();
-  
+  if(rxDone) {
+    responseId();
+  }
+}
+
+//0 handshake complete, 
+byte responseId() {
+  switch(rxBuf[]) {
+    case "+DMOCONNECT:0\r\n":
+      return 0;
+  }
 }
 
 void recvDra() {
   static byte ndx = 0;
   char endMark = '\n';
-  char startMark = '+';
   char rc;
   static bool rxStart = false;
 
   while (Serial.available() > 0 && rxDone == false) {
     rc = Serial.read();
     
-    rxStart = (rc == startMark) ? rxStart : true;
+    rxStart = (rc == '+' || rc == 'S') ? rxStart : true;
     
     if(rxStart) {
       rxBuf[ndx] = rc;
@@ -122,13 +149,4 @@ void voldown() {
     Serial.print(sdata);
   }
   lastvoldown = millis();
-}
-
-void pttt() {
-  static unsigned long lastptt = 0;
-  if (millis() - lastptt > 10) {
-    transmit = !transmit;
-    digitalWrite(pttw, !transmit);
-  }
-  lastptt = millis();
 }
