@@ -1,55 +1,57 @@
 #include <LiquidCrystal.h>
 
 //lcd pin parameters
-#define rs 2      
-#define en 3        //lcd enable
-#define d4 4
-#define d5 5
-#define d6 6      
-#define d7 7
+#define RS 2      
+#define EN 3          //lcd enable
+#define D4 4
+#define D5 5
+#define D6 6      
+#define D7 7
 
 //input pins
-#define cup 8       //channel up
-#define cdown 9     //channel down
-#define vup 10      //volume up
-#define vdown 11    //volume down
-#define squelch 12  //squelch from the dra818u
-#define tx 1
-#define rx 0        //serial
+#define VUP 10        //volume up
+#define CUP 8         //channel up
+#define CDOWN 9       //channel down
+#define VDOWN 11      //volume down
+#define SQ 12         //squelch pin from the dra818u
+#define TX 1
+#define RX 0          //serial
 
-#define pd 13       //power down
-#define hl A0       //high/low transmit power
+#define PD 13         //power down
+#define HL A0         //high/low transmit power
 
-//DRA818U Parameters- squelch level, CTCSS, Channel no., and volume
-#define sql 1
-#define ctcss "0000"
+//DRA818U Parameters
+#define sql 1         //squelch level
+#define ctcss "0000"  //CTCSS, generally off
 
-byte freq = 0, vol = 6;
+byte freq = 0, vol = 6; //frequency and volume
 
 const String freqs[] = {"462.5625", "462.5875", "462.6125", "462.6375", "462.6625", "462.6875", "462.7125", "467.5625", "467.5875",
                         "467.6125", "467.6375", "467.6625", "467.6875", "467.7125", "462.5500", "462.5750", "462.6000", "462.6250",
                         "462.6500", "462.6750", "462.7000", "462.7250"};
-                        
-LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+
+enum resp{HANDSHAKE = 1, FREQSCAN = 2, GROUPSET = 3, VOLUME = 4, SETFILTER = 5}response;
+LiquidCrystal lcd(RS, EN, D4, D5, D6, D7);
 
 //serial parameters
 const byte rxBufMax = 32;
 char rxBuf[32];
 bool rxDone = false;
 
+
 void setup() {
   // put your setup code here, to run once:
   lcd.begin(16, 2);
-  for (int i = cup; i <= squelch; i++) {
+  for (int i = CUP; i <= SQ; i++) {
     pinMode(i, INPUT_PULLUP);
   }
-  pinMode(pd, OUTPUT);
-  pinMode(hl, OUTPUT);
+  pinMode(PD, OUTPUT);
+  pinMode(HL, OUTPUT);
 
-  attachInterrupt(digitalPinToInterrupt(cup), chanup, FALLING);
-  attachInterrupt(digitalPinToInterrupt(cdown), chandown, FALLING);
-  attachInterrupt(digitalPinToInterrupt(vup), volup, FALLING);
-  attachInterrupt(digitalPinToInterrupt(vdown), voldown, FALLING);
+  attachInterrupt(digitalPinToInterrupt(CUP), chanup, FALLING);
+  attachInterrupt(digitalPinToInterrupt(CDOWN), chandown, FALLING);
+  attachInterrupt(digitalPinToInterrupt(VUP), volup, FALLING);
+  attachInterrupt(digitalPinToInterrupt(VDOWN), voldown, FALLING);
   
   Serial.begin(9600);
   while (!Serial) {
@@ -64,12 +66,9 @@ void loop() {
   }
 }
 
-//0 handshake complete, 
 byte responseId() {
-  switch(rxBuf[]) {
-    case "+DMOCONNECT:0\r\n":
-      return 0;
-  }
+  char *type = strtok(rxBuf, "=\r\n");
+  
 }
 
 void recvDra() {
