@@ -66,10 +66,28 @@ void loop() {
   }
 }
 
-byte responseId() {
-  char *type = strtok(rxBuf, "=\r\n");
-  
-}
+char responseId() {
+  char *type = strtok(rxBuf, "=:");
+  char value = strpbrk(rxBuf, "=:")[1];
+  char returnValue = 0;
+  if(!strcmp(type, "+DMOCONNECT")){
+    returnValue = 1;
+  }
+  else if(!strcmp(type, "S")){
+    returnValue = 2;
+  }
+  else if(!strcmp(type, "+DMOSETGROUP")) {
+    returnValue = 3;
+  }
+  else if(!strcmp(type, "+DMOSETVOLUME")) {
+    returnValue = 4;
+  }
+  else if(!strcmp(type, "+DMOSETFILTER")) {
+    returnValue = 5;
+  }
+ }
+
+
 
 void recvDra() {
   static byte ndx = 0;
