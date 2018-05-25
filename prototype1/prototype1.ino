@@ -85,8 +85,14 @@ char responseId() {
   else if(!strcmp(type, "+DMOSETFILTER")) {
     returnValue = 5;
   }
- }
-
+  if(value) {
+    returnValue = returnValue * -1;
+  }
+  if(value != 0 && value != 1) {
+    returnValue = 0;
+  }
+  return returnValue;
+}
 
 
 void recvDra() {
