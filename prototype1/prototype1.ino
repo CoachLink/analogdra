@@ -23,6 +23,9 @@
 //DRA818U Parameters
 #define sql 1         //squelch level
 #define ctcss "0000"  //CTCSS, generally off
+#define premph 0
+#define highpass 1
+#define lowpass 1
 
 byte freq = 0, vol = 6; //frequency and volume
 
@@ -30,7 +33,7 @@ const String freqs[] = {"462.5625", "462.5875", "462.6125", "462.6375", "462.662
                         "467.6125", "467.6375", "467.6625", "467.6875", "467.7125", "462.5500", "462.5750", "462.6000", "462.6250",
                         "462.6500", "462.6750", "462.7000", "462.7250"};
 
-enum resp{HANDSHAKE = 1, FREQSCAN = 2, GROUPSET = 3, VOLUME = 4, SETFILTER = 5}response;
+enum resp{HANDSHAKE = 1, FREQSCAN = 2, GROUPSET = 3, SETVOLUME = 4, SETFILTER = 5}response;
 LiquidCrystal lcd(RS, EN, D4, D5, D6, D7);
 
 //serial parameters
@@ -38,6 +41,9 @@ const byte rxBufMax = 32;
 char rxBuf[32];
 bool rxDone = false;
 
+//pending ccommands
+bool handpend = false, freqpend = false, grouppend = false, volpend = false, filterpend = false;
+byte handfails = 0, freqfails = 0, groupfails = 0, volfails = 0, filterpend = 0;
 
 void setup() {
   // put your setup code here, to run once:
@@ -62,7 +68,18 @@ void setup() {
 void loop() {
   recvDra();
   if(rxDone) {
-    responseId();
+    char rid = responseId();
+    if(rid > 0) {
+      
+    }
+    if(rid < 0 {
+      rid = rid * -1;
+      switch(rid) {
+        case HANDSHAKE:
+        handfails++;
+          retry(HANDSHAKE);
+      }
+    }
   }
 }
 
@@ -71,24 +88,24 @@ char responseId() {
   char value = strpbrk(rxBuf, "=:")[1];
   char returnValue = 0;
   if(!strcmp(type, "+DMOCONNECT")){
-    returnValue = 1;
+    returnValue = HANDSHAKE;
   }
   else if(!strcmp(type, "S")){
-    returnValue = 2;
+    returnValue = FREQSCAN;
   }
   else if(!strcmp(type, "+DMOSETGROUP")) {
-    returnValue = 3;
+    returnValue = GROUPSET;
   }
   else if(!strcmp(type, "+DMOSETVOLUME")) {
-    returnValue = 4;
+    returnValue = SETVOLUME;
   }
   else if(!strcmp(type, "+DMOSETFILTER")) {
-    returnValue = 5;
+    returnValue = SETFILTER;
   }
   if(value) {
     returnValue = returnValue * -1;
   }
-  if(value != 0 && value != 1) {
+  if(value && value != 1) {
     returnValue = 0;
   }
   return returnValue;
@@ -122,11 +139,34 @@ void recvDra() {
   }
 }
 
-//functions
-int reconfig() {
-  //pins
+void handshake() {
+  String sdata = "AT+DMOCONNECT" + '\r' + '\n';
+  Serial.print(sdata);
+  handpend = true;
+}
 
-  //serial
+void volset() {
+    String sdata = "AT+DMOSETVOLUME=" + vol + '\r' + '\n';
+    Serial.print(sdata);
+    volpend = true;
+}
+
+void groupset() {
+    String sdata = "AT+DMOSETGROUP=1," + freqs[freq] + "," + freqs[freq] + "," + ctcss + "," + sql + "," + ctcss + '\r' + '\n';
+    Serial.print(sdata);
+    grouppend = true;
+}
+
+void filterset() {
+  String sdata = "AT+SETFILTER=" + premph + ',' + highpass + ',' + lowpass + '\r' + '\n';
+  Serial.print(sdata);
+  filterpend = true;
+}
+
+int reconfig() {
+  groupset();
+  volset();
+  filterset();
   //volume
   //setgroup
 
@@ -138,8 +178,7 @@ void chanup() {
   static unsigned long lastchanup = 0;
   if (millis() - lastchanup > 10) {
     freq = (freq > 21) ? 0 : (freq + 1);
-    String sdata = "AT+DMOSETGROUP=1," + freqs[freq] + "," + freqs[freq] + "," + ctcss + "," + sql + "," + ctcss + '\r' + '\n';
-    Serial.print(sdata);
+    groupset();
   }
   lastchanup = millis();
 }
@@ -148,8 +187,7 @@ void chandown() {
   static unsigned long lastchandown = 0;
   if (millis() - lastchandown > 10) {
     freq = (freq == 0) ? 22 : (freq - 1);
-    String sdata = "AT+DMOSETGROUP=1," + freqs[freq] + "," + freqs[freq] + "," + ctcss + "," + sql + "," + ctcss + '\r' + '\n';
-    Serial.print(sdata);
+    groupset();
   }
   lastchandown = millis();
 }
@@ -158,8 +196,7 @@ void volup() {
   static unsigned long lastvolup = 0;
   if (millis() - lastvolup > 10) {
     vol = (vol == 8) ? 0 : (vol + 1);
-    String sdata = "AT+DMOSETVOLUME=" + vol + '\r' + '\n';
-    Serial.print(sdata);
+    volset();
   }
   lastvolup = millis();
 }
@@ -168,8 +205,7 @@ void voldown() {
   static unsigned long lastvoldown = 0;
   if (millis() - lastvoldown > 10) {
     vol = (vol == 0) ? 8 : (vol - 1);
-    String sdata = "AT+DMOSETVOLUME=" + vol + '\r' + '\n';
-    Serial.print(sdata);
+    volset();
   }
   lastvoldown = millis();
 }
