@@ -43,7 +43,7 @@ bool rxDone = false;
 
 //pending ccommands
 bool handpend = false, freqpend = false, grouppend = false, volpend = false, filterpend = false;
-byte handfails = 0, freqfails = 0, groupfails = 0, volfails = 0, filterpend = 0;
+byte handfails = 0, freqfails = 0, groupfails = 0, volfails = 0, filterfails = 0;
 
 void setup() {
   // put your setup code here, to run once:
@@ -72,7 +72,7 @@ void loop() {
     if(rid > 0) {
       
     }
-    if(rid < 0 {
+    if(rid < 0) {
       rid = rid * -1;
       switch(rid) {
         case HANDSHAKE:
@@ -81,6 +81,10 @@ void loop() {
       }
     }
   }
+}
+
+void retry(byte goal) {
+  ;
 }
 
 char responseId() {
